@@ -1,0 +1,6 @@
+{
+  "name": "Hành trình khám phá vùng đất mới",
+  "description": "Sổ tay du lịch kỹ thuật số theo phong cách Nhật Bản hiện đại, hỗ trợ lập kế hoạch, quản lý hành trình, lịch trình từng ngày, ngân sách, hành lý và ghi lại nhật ký du lịch.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

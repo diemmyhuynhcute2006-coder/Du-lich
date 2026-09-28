@@ -1,0 +1,213 @@
+{
+  "entities": {
+    "UserProfile": {
+      "title": "UserProfile",
+      "description": "User profile information",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string", "maxLength": 128 },
+        "email": { "type": "string", "maxLength": 256 },
+        "displayName": { "type": "string", "maxLength": 256 },
+        "photoURL": { "type": "string", "maxLength": 1024 },
+        "createdAt": { "type": "string", "maxLength": 64 },
+        "updatedAt": { "type": "string", "maxLength": 64 }
+      },
+      "required": ["userId"]
+    },
+    "Trip": {
+      "title": "Trip",
+      "description": "A travel journey containing itinerary information",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128 },
+        "userId": { "type": "string", "maxLength": 128 },
+        "title": { "type": "string", "maxLength": 256 },
+        "destination": { "type": "string", "maxLength": 256 },
+        "startDate": { "type": "string", "maxLength": 32 },
+        "endDate": { "type": "string", "maxLength": 32 },
+        "coverImage": { "type": "string", "maxLength": 500000 },
+        "budgetGoal": { "type": "number" },
+        "note": { "type": "string", "maxLength": 2048 },
+        "createdAt": { "type": "string", "maxLength": 64 }
+      },
+      "required": ["id", "userId", "title", "destination", "startDate", "endDate"]
+    },
+    "DestinationStop": {
+      "title": "DestinationStop",
+      "description": "A stop or city destination in a trip",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128 },
+        "tripId": { "type": "string", "maxLength": 128 },
+        "userId": { "type": "string", "maxLength": 128 },
+        "name": { "type": "string", "maxLength": 256 },
+        "city": { "type": "string", "maxLength": 128 },
+        "arrivalDate": { "type": "string", "maxLength": 32 },
+        "departureDate": { "type": "string", "maxLength": 32 },
+        "order": { "type": "number" },
+        "image": { "type": "string", "maxLength": 500000 },
+        "notes": { "type": "string", "maxLength": 2048 },
+        "highlights": { "type": "array" }
+      },
+      "required": ["id", "tripId", "userId", "name", "city", "arrivalDate", "departureDate", "order"]
+    },
+    "Activity": {
+      "title": "Activity",
+      "description": "A scheduled activity within a trip",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128 },
+        "tripId": { "type": "string", "maxLength": 128 },
+        "userId": { "type": "string", "maxLength": 128 },
+        "dayNumber": { "type": "number" },
+        "date": { "type": "string", "maxLength": 32 },
+        "time": { "type": "string", "maxLength": 32 },
+        "title": { "type": "string", "maxLength": 256 },
+        "location": { "type": "string", "maxLength": 256 },
+        "type": { "type": "string", "maxLength": 64 },
+        "note": { "type": "string", "maxLength": 2048 },
+        "isCompleted": { "type": "boolean" }
+      },
+      "required": ["id", "tripId", "userId", "dayNumber", "date", "time", "title", "type", "isCompleted"]
+    },
+    "Place": {
+      "title": "Place",
+      "description": "A place of interest or saved location",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128 },
+        "tripId": { "type": "string", "maxLength": 128 },
+        "userId": { "type": "string", "maxLength": 128 },
+        "name": { "type": "string", "maxLength": 256 },
+        "address": { "type": "string", "maxLength": 512 },
+        "city": { "type": "string", "maxLength": 128 },
+        "category": { "type": "string", "maxLength": 64 },
+        "plannedDate": { "type": "string", "maxLength": 32 },
+        "time": { "type": "string", "maxLength": 32 },
+        "note": { "type": "string", "maxLength": 2048 },
+        "image": { "type": "string", "maxLength": 500000 },
+        "isFavorite": { "type": "boolean" }
+      },
+      "required": ["id", "tripId", "userId", "name", "city", "category", "isFavorite"]
+    },
+    "ExpenseItem": {
+      "title": "ExpenseItem",
+      "description": "A tracked spending item for a trip",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128 },
+        "tripId": { "type": "string", "maxLength": 128 },
+        "userId": { "type": "string", "maxLength": 128 },
+        "title": { "type": "string", "maxLength": 256 },
+        "category": { "type": "string", "maxLength": 64 },
+        "amount": { "type": "number" },
+        "date": { "type": "string", "maxLength": 32 },
+        "note": { "type": "string", "maxLength": 1024 }
+      },
+      "required": ["id", "tripId", "userId", "title", "category", "amount", "date"]
+    },
+    "LuggageItem": {
+      "title": "LuggageItem",
+      "description": "A checklist item for luggage packing",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128 },
+        "tripId": { "type": "string", "maxLength": 128 },
+        "userId": { "type": "string", "maxLength": 128 },
+        "name": { "type": "string", "maxLength": 256 },
+        "category": { "type": "string", "maxLength": 64 },
+        "isPacked": { "type": "boolean" },
+        "quantity": { "type": "string", "maxLength": 64 }
+      },
+      "required": ["id", "tripId", "userId", "name", "category", "isPacked"]
+    },
+    "PrepTask": {
+      "title": "PrepTask",
+      "description": "A preparation checklist task before departure",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128 },
+        "tripId": { "type": "string", "maxLength": 128 },
+        "userId": { "type": "string", "maxLength": 128 },
+        "title": { "type": "string", "maxLength": 256 },
+        "isCompleted": { "type": "boolean" },
+        "dueDate": { "type": "string", "maxLength": 32 },
+        "note": { "type": "string", "maxLength": 1024 }
+      },
+      "required": ["id", "tripId", "userId", "title", "isCompleted"]
+    },
+    "JournalEntry": {
+      "title": "JournalEntry",
+      "description": "A travel story or diary memory with photos",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128 },
+        "tripId": { "type": "string", "maxLength": 128 },
+        "userId": { "type": "string", "maxLength": 128 },
+        "date": { "type": "string", "maxLength": 32 },
+        "location": { "type": "string", "maxLength": 256 },
+        "title": { "type": "string", "maxLength": 256 },
+        "content": { "type": "string", "maxLength": 10000 },
+        "images": { "type": "array" },
+        "reflections": { "type": "string", "maxLength": 2048 },
+        "mood": { "type": "string", "maxLength": 64 },
+        "createdAt": { "type": "string", "maxLength": 64 }
+      },
+      "required": ["id", "tripId", "userId", "date", "location", "title", "content", "images", "createdAt"]
+    },
+    "UserSettings": {
+      "title": "UserSettings",
+      "description": "User preferences like selected currency and active trip",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string", "maxLength": 128 },
+        "activeTripId": { "type": "string", "maxLength": 128 },
+        "currency": { "type": "string", "maxLength": 16 },
+        "updatedAt": { "type": "string", "maxLength": 64 }
+      },
+      "required": ["userId"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": "UserProfile",
+      "description": "Individual user profile information"
+    },
+    "/users/{userId}/trips/{tripId}": {
+      "schema": "Trip",
+      "description": "Trips created by the user"
+    },
+    "/users/{userId}/destinations/{destId}": {
+      "schema": "DestinationStop",
+      "description": "Destinations stops within user trips"
+    },
+    "/users/{userId}/activities/{actId}": {
+      "schema": "Activity",
+      "description": "Activities planned within user trips"
+    },
+    "/users/{userId}/places/{placeId}": {
+      "schema": "Place",
+      "description": "Places saved within user trips"
+    },
+    "/users/{userId}/expenses/{expId}": {
+      "schema": "ExpenseItem",
+      "description": "Expenses recorded for user trips"
+    },
+    "/users/{userId}/luggage/{luggageId}": {
+      "schema": "LuggageItem",
+      "description": "Luggage items packed for user trips"
+    },
+    "/users/{userId}/prepTasks/{taskId}": {
+      "schema": "PrepTask",
+      "description": "Preparation tasks for user trips"
+    },
+    "/users/{userId}/journals/{journalId}": {
+      "schema": "JournalEntry",
+      "description": "Journal stories recorded for user trips"
+    },
+    "/users/{userId}/settings/{settingId}": {
+      "schema": "UserSettings",
+      "description": "User settings such as active trip and preferred currency"
+    }
+  }
+}
