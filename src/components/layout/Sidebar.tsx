@@ -39,6 +39,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
     activeTrip,
     stats,
     user,
+    username,
     openAuthModal,
     logout,
   } = useTravel();
@@ -202,16 +203,16 @@ export const Sidebar: React.FC<SidebarProps> = ({
                   />
                 ) : (
                   <div className="w-7 h-7 rounded-full bg-[#B83A2E] text-white flex items-center justify-center font-bold text-xs shrink-0 shadow-xs">
-                    {(user.displayName || user.email || 'U')[0].toUpperCase()}
+                    {(user.displayName || username || 'U')[0].toUpperCase()}
                   </div>
                 )}
                 <div className="min-w-0">
                   <p className="text-xs font-semibold text-stone-200 truncate leading-tight">
-                    {user.displayName || user.email?.split('@')[0]}
+                    {user.displayName || username || 'Người dùng'}
                   </p>
                   <p className="text-[10px] text-emerald-400 flex items-center gap-1 leading-tight mt-0.5">
                     <Cloud className="w-2.5 h-2.5" />
-                    <span>Lưu đám mây</span>
+                    <span>@{username || 'user'}</span>
                   </p>
                 </div>
               </div>

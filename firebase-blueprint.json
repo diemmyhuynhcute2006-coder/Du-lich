@@ -166,9 +166,24 @@
         "updatedAt": { "type": "string", "maxLength": 64 }
       },
       "required": ["userId"]
+    },
+    "UsernameRecord": {
+      "title": "UsernameRecord",
+      "description": "Mapping from unique username to user UID",
+      "type": "object",
+      "properties": {
+        "username": { "type": "string", "maxLength": 64 },
+        "uid": { "type": "string", "maxLength": 128 },
+        "createdAt": { "type": "string", "maxLength": 64 }
+      },
+      "required": ["username", "uid"]
     }
   },
   "firestore": {
+    "/usernames/{username}": {
+      "schema": "UsernameRecord",
+      "description": "Mapping of unique username to user ID"
+    },
     "/users/{userId}": {
       "schema": "UserProfile",
       "description": "Individual user profile information"

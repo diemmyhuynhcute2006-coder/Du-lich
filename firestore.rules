@@ -23,5 +23,12 @@ service cloud.firestore {
         allow read, write: if isOwner(userId);
       }
     }
+
+    // Username Registry - Unique registration mapping
+    match /usernames/{username} {
+      allow read: if isSignedIn();
+      allow create: if isSignedIn() && request.resource.data.uid == request.auth.uid;
+      allow update, delete: if false;
+    }
   }
 }

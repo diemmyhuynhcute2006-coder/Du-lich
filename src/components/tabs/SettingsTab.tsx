@@ -38,6 +38,7 @@ export const SettingsTab: React.FC = () => {
     formatCurrency,
     showToast,
     user,
+    username,
     openAuthModal,
     logout,
     isSyncing,
@@ -149,14 +150,14 @@ export const SettingsTab: React.FC = () => {
                 />
               ) : (
                 <div className="w-12 h-12 rounded-full bg-[#1A2238] text-white flex items-center justify-center font-bold text-lg shadow-sm">
-                  {(user.displayName || user.email || 'U')[0].toUpperCase()}
+                  {(user.displayName || username || 'U')[0].toUpperCase()}
                 </div>
               )}
               <div className="min-w-0">
                 <h4 className="text-sm font-bold text-stone-900 truncate">
-                  {user.displayName || 'Tài khoản người dùng'}
+                  {user.displayName || username || 'Tài khoản người dùng'}
                 </h4>
-                <p className="text-xs text-stone-500 truncate">{user.email}</p>
+                <p className="text-xs text-stone-500 font-mono truncate">Tài khoản: @{username}</p>
                 <div className="flex items-center gap-2 text-[11px] text-emerald-700 font-medium mt-1">
                   <CheckCircle className="w-3 h-3" />
                   <span>Dữ liệu hành trình đã được lưu vào database riêng</span>

@@ -1,6 +1,19 @@
 import React, { useState } from 'react';
-import { X, Mail, Lock, User as UserIcon, LogIn, UserPlus, Sparkles, CheckCircle, ShieldCheck } from 'lucide-react';
+import {
+  X,
+  Lock,
+  User as UserIcon,
+  LogIn,
+  UserPlus,
+  Sparkles,
+  CheckCircle,
+  ShieldCheck,
+  Eye,
+  EyeOff,
+  AlertCircle,
+} from 'lucide-react';
 import { useTravel } from '../../context/TravelContext';
+import { validateUsername } from '../../services/travelDb';
 
 interface AuthModalProps {
   isOpen: boolean;
@@ -9,48 +22,42 @@ interface AuthModalProps {
 
 export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
   const {
-    signInWithGoogle,
-    signInWithEmail,
-    signUpWithEmail,
+    signInWithUsername,
+    signUpWithUsername,
     showToast,
   } = useTravel();
 
   const [mode, setMode] = useState<'signin' | 'signup'>('signin');
-  const [email, setEmail] = useState('');
+  const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
-  const [name, setName] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [displayName, setDisplayName] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   if (!isOpen) return null;
 
-  const handleGoogleSignIn = async () => {
-    setError(null);
-    setIsLoading(true);
-    try {
-      await signInWithGoogle();
-      showToast('Đăng nhập thành công với tài khoản Google!', 'success');
-      onClose();
-    } catch (err: any) {
-      console.error(err);
-      if (err.code === 'auth/popup-closed-by-user') {
-        setError('Cửa sổ đăng nhập đã bị đóng trước khi hoàn tất.');
-      } else if (err.code === 'auth/cancelled-popup-request') {
-        // Ignored
-      } else {
-        setError(err.message || 'Không thể đăng nhập bằng Google. Vui lòng thử lại.');
-      }
-    } finally {
-      setIsLoading(false);
-    }
+  const handleUsernameChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    // Automatically sanitize: trim whitespace, keep lower/upper letters, digits, and underscores
+    const raw = e.target.value.replace(/\s+/g, '');
+    setUsername(raw);
+    if (error) setError(null);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
 
-    if (!email.trim() || !password) {
-      setError('Vui lòng nhập đầy đủ email và mật khẩu');
+    // Validate username format
+    const usernameValidation = validateUsername(username);
+    if (!usernameValidation.isValid) {
+      setError(usernameValidation.error || 'Tên tài khoản không hợp lệ');
+      return;
+    }
+
+    if (!password) {
+      setError('Vui lòng nhập mật khẩu');
       return;
     }
 
@@ -59,32 +66,54 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
       return;
     }
 
+    if (mode === 'signup' && password !== confirmPassword) {
+      setError('Mật khẩu xác nhận không khớp');
+      return;
+    }
+
     setIsLoading(true);
     try {
       if (mode === 'signup') {
-        await signUpWithEmail(email.trim(), password, name.trim());
-        showToast('Tạo tài khoản thành công! Dữ liệu đã được liên kết.', 'success');
+        await signUpWithUsername(username, password, displayName);
+        showToast(`Tạo tài khoản ${username} thành công! Hành trình đã được liên kết.`, 'success');
       } else {
-        await signInWithEmail(email.trim(), password);
-        showToast('Đăng nhập thành công! Đang tải hành trình của bạn.', 'success');
+        await signInWithUsername(username, password);
+        showToast(`Đăng nhập thành công! Đang tải hành trình của bạn.`, 'success');
       }
       onClose();
     } catch (err: any) {
-      console.error(err);
-      if (err.code === 'auth/email-already-in-use') {
-        setError('Email này đã được đăng ký. Vui lòng chuyển sang tab Đăng nhập.');
-      } else if (err.code === 'auth/user-not-found' || err.code === 'auth/wrong-password' || err.code === 'auth/invalid-credential') {
-        setError('Email hoặc mật khẩu không chính xác.');
-      } else if (err.code === 'auth/invalid-email') {
-        setError('Địa chỉ email không đúng định dạng.');
-      } else if (err.code === 'auth/operation-not-allowed') {
-        setError('Tính năng đăng nhập email chưa được bật trên Firebase Console. Bạn có thể dùng nút Đăng nhập bằng Google bên dưới!');
+      console.error('Authentication error:', err);
+      const code = err.code || '';
+      const msg = err.message || '';
+
+      if (code === 'auth/email-already-in-use' || msg.includes('email-already-in-use')) {
+        setError('Tên tài khoản này đã được sử dụng. Vui lòng chọn tên tài khoản khác hoặc chuyển sang Đăng nhập.');
+      } else if (
+        code === 'auth/user-not-found' ||
+        code === 'auth/wrong-password' ||
+        code === 'auth/invalid-credential' ||
+        msg.includes('invalid-credential')
+      ) {
+        setError('Tên tài khoản hoặc mật khẩu không chính xác.');
+      } else if (code === 'auth/weak-password' || msg.includes('weak-password')) {
+        setError('Mật khẩu quá yếu. Vui lòng đặt mật khẩu tối thiểu 6 ký tự.');
+      } else if (code === 'auth/operation-not-allowed' || msg.includes('operation-not-allowed')) {
+        setError(
+          'Tính năng tài khoản chưa được bật trong Firebase Console. Vui lòng vào Firebase Console > Authentication > Sign-in method và bật "Email/Password".'
+        );
       } else {
-        setError(err.message || 'Đã có lỗi xảy ra. Vui lòng thử lại.');
+        setError(msg || 'Đã có lỗi xảy ra trong quá trình xác thực. Vui lòng thử lại.');
       }
     } finally {
       setIsLoading(false);
     }
+  };
+
+  const switchMode = (newMode: 'signin' | 'signup') => {
+    setMode(newMode);
+    setError(null);
+    setPassword('');
+    setConfirmPassword('');
   };
 
   return (
@@ -105,10 +134,12 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
             <ShieldCheck className="w-6 h-6" />
           </div>
           <h2 className="font-editorial text-2xl font-bold text-stone-900">
-            {mode === 'signin' ? 'Đăng nhập tài khoản' : 'Tạo tài khoản mới'}
+            {mode === 'signin' ? 'Đăng nhập tài khoản' : 'Đăng ký tài khoản'}
           </h2>
           <p className="text-xs text-stone-600 mt-1 max-w-xs mx-auto">
-            Lưu trữ hành trình, chặng đi, chi tiêu và kỷ niệm an toàn trên đám mây, khôi phục mọi lúc mọi nơi.
+            {mode === 'signin'
+              ? 'Nhập tên tài khoản và mật khẩu để tiếp tục quản lý hành trình du lịch.'
+              : 'Tạo tài khoản riêng biệt để lưu trữ vĩnh viễn và đồng bộ dữ liệu trên đám mây.'}
           </p>
         </div>
 
@@ -116,10 +147,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
         <div className="flex rounded-xl bg-stone-200/70 p-1 mb-5">
           <button
             type="button"
-            onClick={() => {
-              setMode('signin');
-              setError(null);
-            }}
+            onClick={() => switchMode('signin')}
             className={`flex-1 py-2 text-xs font-semibold rounded-lg transition-all cursor-pointer ${
               mode === 'signin'
                 ? 'bg-white text-stone-900 shadow-xs'
@@ -130,10 +158,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
           </button>
           <button
             type="button"
-            onClick={() => {
-              setMode('signup');
-              setError(null);
-            }}
+            onClick={() => switchMode('signup')}
             className={`flex-1 py-2 text-xs font-semibold rounded-lg transition-all cursor-pointer ${
               mode === 'signup'
                 ? 'bg-white text-stone-900 shadow-xs'
@@ -144,107 +169,118 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
           </button>
         </div>
 
-        {/* Google One-Click Login Button */}
-        <button
-          type="button"
-          onClick={handleGoogleSignIn}
-          disabled={isLoading}
-          className="w-full flex items-center justify-center gap-3 py-2.5 px-4 bg-white hover:bg-stone-50 text-stone-800 text-sm font-medium rounded-xl border border-stone-300 shadow-xs transition-colors cursor-pointer mb-5 disabled:opacity-50"
-        >
-          <svg className="w-4 h-4" viewBox="0 0 24 24">
-            <path
-              fill="#4285F4"
-              d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
-            />
-            <path
-              fill="#34A853"
-              d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"
-            />
-            <path
-              fill="#FBBC05"
-              d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z"
-            />
-            <path
-              fill="#EA4335"
-              d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"
-            />
-          </svg>
-          <span>Tiếp tục với Google (Nhanh nhất)</span>
-        </button>
-
-        <div className="relative flex items-center justify-center mb-5">
-          <div className="border-t border-stone-300 w-full" />
-          <span className="bg-[#FAF8F5] px-3 text-[11px] text-stone-500 uppercase tracking-wider font-medium">
-            Hoặc bằng email
-          </span>
-        </div>
-
         {/* Error alert */}
         {error && (
-          <div className="p-3 mb-4 rounded-xl bg-rose-50 border border-rose-200 text-rose-700 text-xs leading-relaxed animate-in fade-in">
-            {error}
+          <div className="p-3 mb-4 rounded-xl bg-rose-50 border border-rose-200 text-rose-700 text-xs leading-relaxed flex items-start gap-2 animate-in fade-in">
+            <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
+            <span>{error}</span>
           </div>
         )}
 
-        {/* Email & Password Form */}
+        {/* Username & Password Form */}
         <form onSubmit={handleSubmit} className="space-y-3.5">
+          {/* Tên tài khoản (Username) */}
+          <div>
+            <div className="flex items-center justify-between mb-1">
+              <label className="text-xs font-semibold text-stone-700 block">
+                Tên tài khoản
+              </label>
+              <span className="text-[10px] text-stone-400 font-mono">3–20 ký tự</span>
+            </div>
+            <div className="relative">
+              <UserIcon className="w-4 h-4 text-stone-400 absolute left-3 top-1/2 -translate-y-1/2" />
+              <input
+                type="text"
+                required
+                autoComplete="username"
+                value={username}
+                onChange={handleUsernameChange}
+                placeholder="Ví dụ: diemmy2006, travel_lover"
+                className="w-full pl-9 pr-3 py-2 bg-white border border-stone-300 rounded-xl text-xs sm:text-sm text-stone-900 placeholder:text-stone-400 focus:outline-none focus:ring-2 focus:ring-[#B83A2E]/20 focus:border-[#B83A2E] font-medium"
+              />
+            </div>
+            <p className="text-[10px] text-stone-500 mt-1">
+              Chỉ dùng chữ cái không dấu, số và gạch dưới (_), không khoảng trắng.
+            </p>
+          </div>
+
+          {/* Họ tên hiển thị (Chỉ hiện khi Đăng ký, tùy chọn) */}
           {mode === 'signup' && (
             <div>
               <label className="text-xs font-semibold text-stone-700 block mb-1">
-                Tên của bạn
+                Tên hiển thị <span className="text-stone-400 font-normal">(tùy chọn)</span>
               </label>
               <div className="relative">
-                <UserIcon className="w-4 h-4 text-stone-400 absolute left-3 top-1/2 -translate-y-1/2" />
+                <Sparkles className="w-4 h-4 text-stone-400 absolute left-3 top-1/2 -translate-y-1/2" />
                 <input
                   type="text"
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  placeholder="Ví dụ: Minh Anh"
-                  className="w-full pl-9 pr-3 py-2 bg-white border border-stone-300 rounded-xl text-xs sm:text-sm text-stone-900 focus:outline-none focus:ring-2 focus:ring-[#B83A2E]/20 focus:border-[#B83A2E]"
+                  value={displayName}
+                  onChange={(e) => setDisplayName(e.target.value)}
+                  placeholder="Ví dụ: Diễm My"
+                  className="w-full pl-9 pr-3 py-2 bg-white border border-stone-300 rounded-xl text-xs sm:text-sm text-stone-900 placeholder:text-stone-400 focus:outline-none focus:ring-2 focus:ring-[#B83A2E]/20 focus:border-[#B83A2E]"
                 />
               </div>
             </div>
           )}
 
+          {/* Mật khẩu */}
           <div>
-            <label className="text-xs font-semibold text-stone-700 block mb-1">
-              Địa chỉ Email
-            </label>
-            <div className="relative">
-              <Mail className="w-4 h-4 text-stone-400 absolute left-3 top-1/2 -translate-y-1/2" />
-              <input
-                type="email"
-                required
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder="tenban@email.com"
-                className="w-full pl-9 pr-3 py-2 bg-white border border-stone-300 rounded-xl text-xs sm:text-sm text-stone-900 focus:outline-none focus:ring-2 focus:ring-[#B83A2E]/20 focus:border-[#B83A2E]"
-              />
+            <div className="flex items-center justify-between mb-1">
+              <label className="text-xs font-semibold text-stone-700 block">
+                Mật khẩu
+              </label>
+              <span className="text-[10px] text-stone-400 font-mono">Tối thiểu 6 ký tự</span>
             </div>
-          </div>
-
-          <div>
-            <label className="text-xs font-semibold text-stone-700 block mb-1">
-              Mật khẩu
-            </label>
             <div className="relative">
               <Lock className="w-4 h-4 text-stone-400 absolute left-3 top-1/2 -translate-y-1/2" />
               <input
-                type="password"
+                type={showPassword ? 'text' : 'password'}
                 required
                 minLength={6}
+                autoComplete={mode === 'signin' ? 'current-password' : 'new-password'}
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                placeholder="Ít nhất 6 ký tự"
-                className="w-full pl-9 pr-3 py-2 bg-white border border-stone-300 rounded-xl text-xs sm:text-sm text-stone-900 focus:outline-none focus:ring-2 focus:ring-[#B83A2E]/20 focus:border-[#B83A2E]"
+                placeholder="••••••••"
+                className="w-full pl-9 pr-10 py-2 bg-white border border-stone-300 rounded-xl text-xs sm:text-sm text-stone-900 placeholder:text-stone-400 focus:outline-none focus:ring-2 focus:ring-[#B83A2E]/20 focus:border-[#B83A2E]"
               />
+              <button
+                type="button"
+                onClick={() => setShowPassword(!showPassword)}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-stone-400 hover:text-stone-600 cursor-pointer p-0.5"
+                aria-label={showPassword ? 'Ẩn mật khẩu' : 'Hiện mật khẩu'}
+              >
+                {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+              </button>
             </div>
           </div>
 
+          {/* Xác nhận mật khẩu (Chỉ hiện khi Đăng ký) */}
+          {mode === 'signup' && (
+            <div>
+              <label className="text-xs font-semibold text-stone-700 block mb-1">
+                Xác nhận lại mật khẩu
+              </label>
+              <div className="relative">
+                <Lock className="w-4 h-4 text-stone-400 absolute left-3 top-1/2 -translate-y-1/2" />
+                <input
+                  type={showPassword ? 'text' : 'password'}
+                  required
+                  minLength={6}
+                  autoComplete="new-password"
+                  value={confirmPassword}
+                  onChange={(e) => setConfirmPassword(e.target.value)}
+                  placeholder="Nhập lại mật khẩu"
+                  className="w-full pl-9 pr-3 py-2 bg-white border border-stone-300 rounded-xl text-xs sm:text-sm text-stone-900 placeholder:text-stone-400 focus:outline-none focus:ring-2 focus:ring-[#B83A2E]/20 focus:border-[#B83A2E]"
+                />
+              </div>
+            </div>
+          )}
+
+          {/* Submit Button */}
           <button
             type="submit"
             disabled={isLoading}
-            className="w-full py-2.5 px-4 bg-[#B83A2E] hover:bg-[#9E2F25] text-white text-xs sm:text-sm font-semibold rounded-xl shadow-md transition-all cursor-pointer flex items-center justify-center gap-2 disabled:opacity-50 mt-2"
+            className="w-full py-2.5 px-4 bg-[#B83A2E] hover:bg-[#9E2F25] text-white text-xs sm:text-sm font-semibold rounded-xl shadow-md transition-all cursor-pointer flex items-center justify-center gap-2 disabled:opacity-50 mt-4"
           >
             {isLoading ? (
               <span className="inline-block w-4 h-4 border-2 border-white/40 border-t-white rounded-full animate-spin" />
@@ -266,11 +302,11 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
         <div className="mt-5 pt-4 border-t border-stone-200/80 text-[11px] text-stone-500 space-y-1.5">
           <div className="flex items-center gap-1.5 text-stone-600">
             <CheckCircle className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
-            <span>Tự động đồng bộ và sao lưu dữ liệu mọi lúc</span>
+            <span>Mỗi người dùng có một cơ sở dữ liệu riêng tư và an toàn</span>
           </div>
           <div className="flex items-center gap-1.5 text-stone-600">
             <CheckCircle className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
-            <span>Mỗi người dùng có dữ liệu riêng tư, an toàn</span>
+            <span>Tự động liên kết hành trình hiện tại trên máy vào tài khoản mới</span>
           </div>
         </div>
       </div>

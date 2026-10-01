@@ -25,6 +25,7 @@ export const Header: React.FC<HeaderProps> = ({
     activeTrip,
     stats,
     user,
+    username,
     isSyncing,
     openAuthModal,
     logout,
@@ -38,12 +39,12 @@ export const Header: React.FC<HeaderProps> = ({
     return `${d}/${m}/${y}`;
   };
 
-  const getInitials = (name?: string | null, email?: string | null) => {
+  const getInitials = (name?: string | null, uName?: string | null) => {
     if (name) {
       const parts = name.trim().split(' ');
       return parts[parts.length - 1][0].toUpperCase();
     }
-    if (email) return email[0].toUpperCase();
+    if (uName) return uName[0].toUpperCase();
     return 'U';
   };
 
@@ -139,15 +140,15 @@ export const Header: React.FC<HeaderProps> = ({
                 />
               ) : (
                 <div className="w-7 h-7 rounded-full bg-[#1A2238] text-white flex items-center justify-center font-bold text-xs shadow-2xs">
-                  {getInitials(user.displayName, user.email)}
+                  {getInitials(user.displayName, username)}
                 </div>
               )}
               <div className="hidden lg:block">
                 <span className="text-xs font-semibold text-stone-800 block leading-tight max-w-[120px] truncate">
-                  {user.displayName || user.email?.split('@')[0]}
+                  {user.displayName || username || 'Người dùng'}
                 </span>
                 <span className="text-[10px] text-emerald-700 block leading-tight font-medium">
-                  Đã kết nối
+                  @{username || 'user'}
                 </span>
               </div>
             </button>
@@ -162,10 +163,10 @@ export const Header: React.FC<HeaderProps> = ({
                 <div className="absolute right-0 mt-1.5 w-64 bg-white border border-stone-200 rounded-xl shadow-lg p-2 z-50 animate-in fade-in zoom-in-95 duration-100">
                   <div className="px-3 py-2 border-b border-stone-100">
                     <p className="text-xs font-semibold text-stone-900 truncate">
-                      {user.displayName || 'Người dùng'}
+                      {user.displayName || username || 'Người dùng'}
                     </p>
-                    <p className="text-[11px] text-stone-500 truncate mt-0.5">
-                      {user.email}
+                    <p className="text-[11px] text-stone-500 font-mono truncate mt-0.5">
+                      @{username || 'user'}
                     </p>
                   </div>
 

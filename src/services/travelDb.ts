@@ -146,3 +146,67 @@ export function subscribeToUserData(
     }
   );
 }
+
+/**
+ * Validate that username contains only 3-20 alphanumeric characters or underscores, no spaces, no diacritics
+ */
+export function validateUsername(username: string): { isValid: boolean; error?: string } {
+  const trimmed = username.trim();
+  if (!trimmed) {
+    return { isValid: false, error: 'Vui lòng nhập tên tài khoản' };
+  }
+  if (trimmed.length < 3 || trimmed.length > 20) {
+    return { isValid: false, error: 'Tên tài khoản phải từ 3 đến 20 ký tự' };
+  }
+  // Regex strictly allows letters (a-z, A-Z), digits (0-9), and underscores (_)
+  const validPattern = /^[a-zA-Z0-9_]+$/;
+  if (!validPattern.test(trimmed)) {
+    return {
+      isValid: false,
+      error: 'Tên tài khoản chỉ được chứa chữ cái tiếng Anh (không dấu), số và dấu gạch dưới (_)',
+    };
+  }
+  return { isValid: true };
+}
+
+/**
+ * Convert user-entered username to internal synthetic Firebase Auth email
+ */
+export function usernameToSyntheticEmail(username: string): string {
+  const clean = username.trim().toLowerCase();
+  return `${clean}@journey.app`;
+}
+
+/**
+ * Extract clean username for UI display
+ */
+export function getUsernameFromEmailOrUser(
+  email?: string | null,
+  displayName?: string | null
+): string {
+  if (displayName && !displayName.includes('@')) {
+    return displayName;
+  }
+  if (!email) return 'Người dùng';
+  if (email.endsWith('@journey.app')) {
+    return email.replace('@journey.app', '');
+  }
+  return email.split('@')[0];
+}
+
+/**
+ * Register username in Firestore registry
+ */
+export async function registerUsernameRecord(username: string, uid: string): Promise<void> {
+  const clean = username.trim().toLowerCase();
+  try {
+    await setDoc(doc(db, 'usernames', clean), {
+      username: clean,
+      uid,
+      createdAt: new Date().toISOString(),
+    });
+  } catch (error) {
+    console.warn('Could not record username mapping in Firestore:', error);
+  }
+}
+

@@ -1,17 +1,20 @@
 import React, { createContext, useContext, useState, useEffect, useRef, ReactNode } from 'react';
 import {
   User,
-  signInWithPopup,
   signInWithEmailAndPassword,
   createUserWithEmailAndPassword,
   signOut,
   onAuthStateChanged,
   updateProfile,
 } from 'firebase/auth';
-import { auth, googleProvider } from '../services/firebase';
+import { auth } from '../services/firebase';
 import {
   loadUserDataFromFirestore,
   saveUserDataToFirestore,
+  validateUsername,
+  usernameToSyntheticEmail,
+  getUsernameFromEmailOrUser,
+  registerUsernameRecord,
 } from '../services/travelDb';
 import {
   Trip,
@@ -46,14 +49,14 @@ export interface ToastMessage {
 interface TravelContextType {
   // Auth & Cloud Sync
   user: User | null;
+  username: string;
   isAuthLoading: boolean;
   isSyncing: boolean;
   isAuthModalOpen: boolean;
   openAuthModal: () => void;
   closeAuthModal: () => void;
-  signInWithGoogle: () => Promise<void>;
-  signInWithEmail: (email: string, pass: string) => Promise<void>;
-  signUpWithEmail: (email: string, pass: string, name?: string) => Promise<void>;
+  signInWithUsername: (username: string, pass: string) => Promise<void>;
+  signUpWithUsername: (username: string, pass: string, displayName?: string) => Promise<void>;
   logout: () => Promise<void>;
 
   trips: Trip[];
@@ -340,6 +343,7 @@ export const TravelProvider: React.FC<{ children: ReactNode }> = ({ children }) 
 
   // Auth & Cloud Database Sync state
   const [user, setUser] = useState<User | null>(null);
+  const [username, setUsername] = useState<string>('');
   const [isAuthLoading, setIsAuthLoading] = useState(true);
   const [isSyncing, setIsSyncing] = useState(false);
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
@@ -347,27 +351,44 @@ export const TravelProvider: React.FC<{ children: ReactNode }> = ({ children }) 
   const openAuthModal = () => setIsAuthModalOpen(true);
   const closeAuthModal = () => setIsAuthModalOpen(false);
 
-  const signInWithGoogle = async () => {
-    await signInWithPopup(auth, googleProvider);
+  const signInWithUsername = async (rawUsername: string, pass: string) => {
+    const v = validateUsername(rawUsername);
+    if (!v.isValid) {
+      throw new Error(v.error || 'Tên tài khoản không hợp lệ');
+    }
+    const cleanUsername = rawUsername.trim().toLowerCase();
+    const syntheticEmail = usernameToSyntheticEmail(cleanUsername);
+    await signInWithEmailAndPassword(auth, syntheticEmail, pass);
   };
 
-  const signInWithEmail = async (email: string, pass: string) => {
-    await signInWithEmailAndPassword(auth, email, pass);
-  };
+  const signUpWithUsername = async (rawUsername: string, pass: string, displayName?: string) => {
+    const v = validateUsername(rawUsername);
+    if (!v.isValid) {
+      throw new Error(v.error || 'Tên tài khoản không hợp lệ');
+    }
+    if (!pass || pass.length < 6) {
+      throw new Error('Mật khẩu phải có tối thiểu 6 ký tự');
+    }
+    const cleanUsername = rawUsername.trim().toLowerCase();
+    const syntheticEmail = usernameToSyntheticEmail(cleanUsername);
+    const chosenName = displayName?.trim() || cleanUsername;
 
-  const signUpWithEmail = async (email: string, pass: string, name?: string) => {
-    const cred = await createUserWithEmailAndPassword(auth, email, pass);
-    if (name && cred.user) {
+    const cred = await createUserWithEmailAndPassword(auth, syntheticEmail, pass);
+    if (cred.user) {
       try {
-        await updateProfile(cred.user, { displayName: name });
+        await updateProfile(cred.user, { displayName: chosenName });
       } catch (e) {
         console.warn('Failed to update displayName:', e);
       }
+      await registerUsernameRecord(cleanUsername, cred.user.uid);
+      setUsername(cleanUsername);
     }
   };
 
   const logout = async () => {
     await signOut(auth);
+    setUser(null);
+    setUsername('');
     showToast('Đã đăng xuất tài khoản', 'info');
   };
 
@@ -379,6 +400,9 @@ export const TravelProvider: React.FC<{ children: ReactNode }> = ({ children }) 
     const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
       setUser(currentUser);
       if (currentUser) {
+        const currentUsername = getUsernameFromEmailOrUser(currentUser.email, currentUser.displayName);
+        setUsername(currentUsername);
+
         try {
           const cloudData = await loadUserDataFromFirestore(currentUser.uid);
           if (cloudData && cloudData.trips && cloudData.trips.length > 0) {
@@ -392,7 +416,7 @@ export const TravelProvider: React.FC<{ children: ReactNode }> = ({ children }) 
             if (cloudData.luggage) setLuggageState(cloudData.luggage);
             if (cloudData.prepTasks) setPrepTasksState(cloudData.prepTasks);
             if (cloudData.journals) setJournalsState(cloudData.journals);
-            showToast(`Chào mừng, ${currentUser.displayName || currentUser.email}! Đã khôi phục dữ liệu hành trình.`, 'success');
+            showToast(`Chào mừng, ${currentUsername}! Đã khôi phục dữ liệu hành trình.`, 'success');
           } else {
             // New user without cloud data:
             // Automatically sync current local data to their new account so created itineraries are preserved
@@ -417,6 +441,7 @@ export const TravelProvider: React.FC<{ children: ReactNode }> = ({ children }) 
           setIsAuthLoading(false);
         }
       } else {
+        setUsername('');
         cloudDataLoadedRef.current = false;
         setIsAuthLoading(false);
       }
@@ -882,14 +907,14 @@ export const TravelProvider: React.FC<{ children: ReactNode }> = ({ children }) 
     <TravelContext.Provider
       value={{
         user,
+        username,
         isAuthLoading,
         isSyncing,
         isAuthModalOpen,
         openAuthModal,
         closeAuthModal,
-        signInWithGoogle,
-        signInWithEmail,
-        signUpWithEmail,
+        signInWithUsername,
+        signUpWithUsername,
         logout,
         trips,
         activeTripId,
