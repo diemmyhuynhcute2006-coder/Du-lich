@@ -13,7 +13,7 @@ import {
   AlertCircle,
 } from 'lucide-react';
 import { useTravel } from '../../context/TravelContext';
-import { validateUsername } from '../../services/travelDb';
+import { validateUsername } from '../../services/localAuth';
 
 interface AuthModalProps {
   isOpen: boolean;
@@ -83,27 +83,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
       onClose();
     } catch (err: any) {
       console.error('Authentication error:', err);
-      const code = err.code || '';
-      const msg = err.message || '';
-
-      if (code === 'auth/email-already-in-use' || msg.includes('email-already-in-use')) {
-        setError('Tên tài khoản này đã được sử dụng. Vui lòng chọn tên tài khoản khác hoặc chuyển sang Đăng nhập.');
-      } else if (
-        code === 'auth/user-not-found' ||
-        code === 'auth/wrong-password' ||
-        code === 'auth/invalid-credential' ||
-        msg.includes('invalid-credential')
-      ) {
-        setError('Tên tài khoản hoặc mật khẩu không chính xác.');
-      } else if (code === 'auth/weak-password' || msg.includes('weak-password')) {
-        setError('Mật khẩu quá yếu. Vui lòng đặt mật khẩu tối thiểu 6 ký tự.');
-      } else if (code === 'auth/operation-not-allowed' || msg.includes('operation-not-allowed')) {
-        setError(
-          'Tính năng tài khoản chưa được bật trong Firebase Console. Vui lòng vào Firebase Console > Authentication > Sign-in method và bật "Email/Password".'
-        );
-      } else {
-        setError(msg || 'Đã có lỗi xảy ra trong quá trình xác thực. Vui lòng thử lại.');
-      }
+      setError(err.message || 'Đã có lỗi xảy ra trong quá trình xác thực. Vui lòng thử lại.');
     } finally {
       setIsLoading(false);
     }

@@ -211,7 +211,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                     {user.displayName || username || 'Người dùng'}
                   </p>
                   <p className="text-[10px] text-emerald-400 flex items-center gap-1 leading-tight mt-0.5">
-                    <Cloud className="w-2.5 h-2.5" />
+                    <ShieldCheck className="w-2.5 h-2.5" />
                     <span>@{username || 'user'}</span>
                   </p>
                 </div>

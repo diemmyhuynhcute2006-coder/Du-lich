@@ -94,21 +94,21 @@ export const Header: React.FC<HeaderProps> = ({
 
       {/* Zone 3: Primary Action & User Account */}
       <div className="flex items-center gap-2.5">
-        {/* Cloud Sync Status Indicator */}
+        {/* Account Sync Status Indicator */}
         {user ? (
           <div
             className="hidden sm:flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-50 border border-emerald-200 text-[11px] text-emerald-800"
-            title={isSyncing ? 'Đang đồng bộ dữ liệu lên Cloud Firestore...' : 'Dữ liệu đã được lưu trữ an toàn trên đám mây'}
+            title={isSyncing ? 'Đang lưu dữ liệu hành trình...' : 'Dữ liệu đã được lưu trữ an toàn trong tài khoản'}
           >
             {isSyncing ? (
               <>
                 <RefreshCw className="w-3 h-3 text-emerald-600 animate-spin" />
-                <span>Đang đồng bộ...</span>
+                <span>Đang lưu...</span>
               </>
             ) : (
               <>
-                <Cloud className="w-3 h-3 text-emerald-600" />
-                <span className="font-medium">Đã lưu đám mây</span>
+                <Check className="w-3 h-3 text-emerald-600" />
+                <span className="font-medium">Đã lưu tài khoản</span>
               </>
             )}
           </div>
@@ -116,10 +116,10 @@ export const Header: React.FC<HeaderProps> = ({
           <button
             onClick={openAuthModal}
             className="hidden sm:inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-amber-50 border border-amber-200 text-[11px] text-amber-800 hover:bg-amber-100 transition-colors cursor-pointer"
-            title="Đăng nhập để lưu trữ vĩnh viễn và không bị mất dữ liệu"
+            title="Đăng ký hoặc đăng nhập để tạo dữ liệu hành trình riêng biệt"
           >
-            <Cloud className="w-3 h-3 text-amber-600" />
-            <span>Chưa đăng nhập (Lưu tạm)</span>
+            <UserIcon className="w-3 h-3 text-amber-600" />
+            <span>Chưa đăng nhập (Khách)</span>
           </button>
         )}
 
@@ -175,7 +175,7 @@ export const Header: React.FC<HeaderProps> = ({
                       <span>Trạng thái lưu:</span>
                       <span className="text-emerald-700 font-semibold flex items-center gap-1">
                         <Check className="w-3 h-3" />
-                        Đám mây
+                        Tài khoản riêng
                       </span>
                     </div>
                   </div>

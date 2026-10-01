@@ -121,19 +121,19 @@ export const SettingsTab: React.FC = () => {
         </p>
       </div>
 
-      {/* Section: Tài khoản & Cơ sở dữ liệu đám mây (Cloud Firestore) */}
+      {/* Section: Tài khoản & Dữ liệu riêng biệt */}
       <div className="bg-white rounded-2xl p-6 border border-stone-200 shadow-xs space-y-4">
         <div className="flex items-center justify-between pb-3 border-b border-stone-100 flex-wrap gap-2">
           <div className="flex items-center gap-2">
             <ShieldCheck className="w-5 h-5 text-[#B83A2E]" />
             <h3 className="font-editorial text-lg font-bold text-stone-900">
-              Tài khoản & Cơ sở dữ liệu đám mây
+              Tài khoản & Dữ liệu riêng biệt
             </h3>
           </div>
           {user && (
             <span className="text-[11px] font-semibold text-emerald-800 bg-emerald-50 px-2.5 py-1 rounded-full border border-emerald-200 flex items-center gap-1.5">
-              <Cloud className="w-3.5 h-3.5 text-emerald-600" />
-              <span>Cloud Firestore Active</span>
+              <CheckCircle className="w-3.5 h-3.5 text-emerald-600" />
+              <span>Tài khoản đã kích hoạt</span>
             </span>
           )}
         </div>
@@ -160,7 +160,7 @@ export const SettingsTab: React.FC = () => {
                 <p className="text-xs text-stone-500 font-mono truncate">Tài khoản: @{username}</p>
                 <div className="flex items-center gap-2 text-[11px] text-emerald-700 font-medium mt-1">
                   <CheckCircle className="w-3 h-3" />
-                  <span>Dữ liệu hành trình đã được lưu vào database riêng</span>
+                  <span>Dữ liệu hành trình được lưu trữ độc lập theo tài khoản</span>
                   {isSyncing && <RefreshCw className="w-3 h-3 animate-spin text-emerald-600 ml-1" />}
                 </div>
               </div>
@@ -181,11 +181,11 @@ export const SettingsTab: React.FC = () => {
           <div className="p-4 sm:p-5 rounded-xl bg-amber-50/70 border border-amber-200 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
             <div>
               <div className="flex items-center gap-1.5 text-amber-900 font-bold text-sm">
-                <Cloud className="w-4 h-4 text-amber-700" />
-                <span>Bạn đang sử dụng chế độ Khách (Lưu tạm thời)</span>
+                <ShieldCheck className="w-4 h-4 text-amber-700" />
+                <span>Bạn đang sử dụng chế độ Khách</span>
               </div>
               <p className="text-xs text-amber-800 mt-1 max-w-xl leading-relaxed">
-                Để tránh bị mất hành trình khi đổi thiết bị, xóa lịch sử duyệt web hoặc mở lại vào ngày hôm sau, vui lòng đăng nhập hoặc tạo tài khoản miễn phí. Toàn bộ hành trình bạn vừa tạo sẽ tự động được lưu vào database.
+                Đăng ký một tài khoản riêng (chỉ cần Tên tài khoản và Mật khẩu) để lưu giữ hành trình riêng biệt, không bị ảnh hưởng khi có người khác sử dụng cùng trình duyệt.
               </p>
             </div>
             <button
