@@ -1,26 +1,16 @@
 import React, { createContext, useContext, useState, useEffect, useRef, ReactNode } from 'react';
 import {
-  UserSession,
-  registerLocalAccount,
-  loginLocalAccount,
-  getCurrentSession,
-  clearCurrentSession,
-} from '../services/localAuth';
+  User,
+  signInWithPopup,
+  signOut,
+  onAuthStateChanged,
+} from 'firebase/auth';
+import { auth, googleProvider } from '../services/firebase';
 import {
-  saveUserTravelData,
-  loadUserTravelData,
-  getExistingLocalData,
+  loadUserDataFromFirestore,
+  saveUserDataToFirestore,
   UserTravelData,
-} from '../services/localTravelDb';
-
-export interface CurrentUser {
-  uid: string;
-  username: string;
-  displayName: string;
-  createdAt: string;
-  photoURL?: string | null;
-  email?: string | null;
-}
+} from '../services/travelDb';
 import {
   Trip,
   DestinationStop,
@@ -52,16 +42,15 @@ export interface ToastMessage {
 }
 
 interface TravelContextType {
-  // Auth & Account State
-  user: CurrentUser | null;
+  // Auth & Cloud Sync
+  user: User | null;
   username: string;
   isAuthLoading: boolean;
   isSyncing: boolean;
   isAuthModalOpen: boolean;
   openAuthModal: () => void;
   closeAuthModal: () => void;
-  signInWithUsername: (username: string, pass: string) => Promise<void>;
-  signUpWithUsername: (username: string, pass: string, displayName?: string) => Promise<void>;
+  signInWithGoogle: () => Promise<void>;
   logout: () => Promise<void>;
 
   trips: Trip[];
@@ -346,169 +335,99 @@ export const TravelProvider: React.FC<{ children: ReactNode }> = ({ children }) 
     safeSetItem(`${STORAGE_KEY}_journals`, JSON.stringify(journalsState));
   }, [journalsState]);
 
-  // Local Account & Session State
-  const [user, setUser] = useState<CurrentUser | null>(() => {
-    const s = getCurrentSession();
-    if (!s) return null;
-    return {
-      uid: s.uid,
-      username: s.username,
-      displayName: s.displayName,
-      createdAt: s.createdAt,
-    };
-  });
-
-  const [username, setUsername] = useState<string>(() => {
-    const s = getCurrentSession();
-    return s ? s.username : '';
-  });
-
-  const [isAuthLoading, setIsAuthLoading] = useState(false);
+  // Firebase Auth & Cloud Firestore Sync State
+  const [user, setUser] = useState<User | null>(null);
+  const [username, setUsername] = useState<string>('');
+  const [isAuthLoading, setIsAuthLoading] = useState(true);
   const [isSyncing, setIsSyncing] = useState(false);
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
 
   const openAuthModal = () => setIsAuthModalOpen(true);
   const closeAuthModal = () => setIsAuthModalOpen(false);
 
-  // Restore user-specific data on initial mount
-  const hasInitializedUserRef = useRef(false);
-
-  useEffect(() => {
-    if (hasInitializedUserRef.current) return;
-    hasInitializedUserRef.current = true;
-
-    const session = getCurrentSession();
-    if (session) {
-      const userData = loadUserTravelData(session.uid);
-      if (userData && userData.trips && userData.trips.length > 0) {
-        setTrips(userData.trips);
-        if (userData.activeTripId) setActiveTripId(userData.activeTripId);
-        if (userData.currency) setCurrencyState(userData.currency);
-        if (userData.destinations) setDestinationsState(userData.destinations);
-        if (userData.activities) setActivitiesState(userData.activities);
-        if (userData.places) setPlacesState(userData.places);
-        if (userData.expenses) setExpensesState(userData.expenses);
-        if (userData.luggage) setLuggageState(userData.luggage);
-        if (userData.prepTasks) setPrepTasksState(userData.prepTasks);
-        if (userData.journals) setJournalsState(userData.journals);
-      } else {
-        // If this user has no specific data saved yet, preserve current device data
-        const localBackup = getExistingLocalData();
-        if (localBackup && localBackup.trips.length > 0) {
-          saveUserTravelData(session.uid, localBackup);
-        }
-      }
-    }
-  }, []);
-
-  const signInWithUsername = async (rawUsername: string, pass: string) => {
-    const session = await loginLocalAccount(rawUsername, pass);
-    const currentUserObj: CurrentUser = {
-      uid: session.uid,
-      username: session.username,
-      displayName: session.displayName,
-      createdAt: session.createdAt,
-    };
-    setUser(currentUserObj);
-    setUsername(session.username);
-
-    // Load that user's specific travel data
-    const userData = loadUserTravelData(session.uid);
-    if (userData && userData.trips && userData.trips.length > 0) {
-      setTrips(userData.trips);
-      if (userData.activeTripId) setActiveTripId(userData.activeTripId);
-      if (userData.currency) setCurrencyState(userData.currency);
-      if (userData.destinations) setDestinationsState(userData.destinations);
-      if (userData.activities) setActivitiesState(userData.activities);
-      if (userData.places) setPlacesState(userData.places);
-      if (userData.expenses) setExpensesState(userData.expenses);
-      if (userData.luggage) setLuggageState(userData.luggage);
-      if (userData.prepTasks) setPrepTasksState(userData.prepTasks);
-      if (userData.journals) setJournalsState(userData.journals);
-      showToast(`Chào mừng, @${session.username}! Đã tải hành trình của bạn.`, 'success');
-    } else {
-      // First time logging in with no data: preserve current itinerary
-      const payload = {
-        trips,
-        activeTripId,
-        currency,
-        destinations: destinationsState,
-        activities: activitiesState,
-        places: placesState,
-        expenses: expensesState,
-        luggage: luggageState,
-        prepTasks: prepTasksState,
-        journals: journalsState,
-      };
-      saveUserTravelData(session.uid, payload);
-      showToast(`Chào mừng, @${session.username}!`, 'success');
-    }
-  };
-
-  const signUpWithUsername = async (rawUsername: string, pass: string, displayName?: string) => {
-    const session = await registerLocalAccount(rawUsername, pass, displayName);
-    const currentUserObj: CurrentUser = {
-      uid: session.uid,
-      username: session.username,
-      displayName: session.displayName,
-      createdAt: session.createdAt,
-    };
-    setUser(currentUserObj);
-    setUsername(session.username);
-
-    // Securely tie current local data to this newly registered account
-    const currentPayload = {
-      trips,
-      activeTripId,
-      currency,
-      destinations: destinationsState,
-      activities: activitiesState,
-      places: placesState,
-      expenses: expensesState,
-      luggage: luggageState,
-      prepTasks: prepTasksState,
-      journals: journalsState,
-    };
-    saveUserTravelData(session.uid, currentPayload);
-    showToast(`Đăng ký tài khoản @${session.username} thành công! Hành trình hiện tại đã được liên kết.`, 'success');
+  const signInWithGoogle = async () => {
+    await signInWithPopup(auth, googleProvider);
   };
 
   const logout = async () => {
-    if (user) {
-      // Save current user state before logout
-      saveUserTravelData(user.uid, {
-        trips,
-        activeTripId,
-        currency,
-        destinations: destinationsState,
-        activities: activitiesState,
-        places: placesState,
-        expenses: expensesState,
-        luggage: luggageState,
-        prepTasks: prepTasksState,
-        journals: journalsState,
-      });
-    }
-    clearCurrentSession();
+    await signOut(auth);
     setUser(null);
     setUsername('');
-    showToast('Đã đăng xuất tài khoản', 'info');
+    showToast('Đã đăng xuất tài khoản Google', 'info');
   };
 
-  // Debounced auto-save for active user to ensure data is continuously persisted
+  // Flag to know whether initial cloud data has been loaded for the current user session
+  const cloudDataLoadedRef = useRef(false);
+
+  // Monitor Auth state & restore Cloud Data automatically
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
+      setUser(currentUser);
+      if (currentUser) {
+        const uName = currentUser.displayName || currentUser.email?.split('@')[0] || 'Người dùng';
+        setUsername(uName);
+
+        try {
+          const cloudData = await loadUserDataFromFirestore(currentUser.uid);
+          if (cloudData && cloudData.trips && cloudData.trips.length > 0) {
+            setTrips(cloudData.trips);
+            if (cloudData.activeTripId) setActiveTripId(cloudData.activeTripId);
+            if (cloudData.currency) setCurrencyState(cloudData.currency);
+            if (cloudData.destinations) setDestinationsState(cloudData.destinations);
+            if (cloudData.activities) setActivitiesState(cloudData.activities);
+            if (cloudData.places) setPlacesState(cloudData.places);
+            if (cloudData.expenses) setExpensesState(cloudData.expenses);
+            if (cloudData.luggage) setLuggageState(cloudData.luggage);
+            if (cloudData.prepTasks) setPrepTasksState(cloudData.prepTasks);
+            if (cloudData.journals) setJournalsState(cloudData.journals);
+            showToast(`Chào mừng, ${uName}! Đã khôi phục dữ liệu hành trình từ đám mây.`, 'success');
+          } else {
+            // New user without cloud data:
+            // Automatically sync current local data to their new account so created itineraries are preserved
+            await saveUserDataToFirestore(currentUser.uid, {
+              trips,
+              activeTripId,
+              currency,
+              destinations: destinationsState,
+              activities: activitiesState,
+              places: placesState,
+              expenses: expensesState,
+              luggage: luggageState,
+              prepTasks: prepTasksState,
+              journals: journalsState,
+            });
+            showToast(`Đã lưu dữ liệu hành trình vào tài khoản Google của bạn!`, 'success');
+          }
+        } catch (err) {
+          console.error('Error restoring data from Firestore:', err);
+        } finally {
+          cloudDataLoadedRef.current = true;
+          setIsAuthLoading(false);
+        }
+      } else {
+        setUsername('');
+        cloudDataLoadedRef.current = false;
+        setIsAuthLoading(false);
+      }
+    });
+
+    return () => unsubscribe();
+  }, []);
+
+  // Debounced Cloud Sync when user changes data while authenticated
   const syncTimerRef = useRef<any>(null);
 
   useEffect(() => {
-    if (!user) return;
+    if (!user || isAuthLoading || !cloudDataLoadedRef.current) return;
 
     if (syncTimerRef.current) {
       clearTimeout(syncTimerRef.current);
     }
 
-    syncTimerRef.current = setTimeout(() => {
+    syncTimerRef.current = setTimeout(async () => {
       setIsSyncing(true);
       try {
-        saveUserTravelData(user.uid, {
+        await saveUserDataToFirestore(user.uid, {
           trips,
           activeTripId,
           currency,
@@ -521,11 +440,11 @@ export const TravelProvider: React.FC<{ children: ReactNode }> = ({ children }) 
           journals: journalsState,
         });
       } catch (err) {
-        console.error('Failed to save user travel data:', err);
+        console.error('Failed to sync to Cloud Firestore:', err);
       } finally {
-        setTimeout(() => setIsSyncing(false), 200);
+        setIsSyncing(false);
       }
-    }, 300);
+    }, 600);
 
     return () => {
       if (syncTimerRef.current) {
@@ -534,6 +453,7 @@ export const TravelProvider: React.FC<{ children: ReactNode }> = ({ children }) 
     };
   }, [
     user,
+    isAuthLoading,
     trips,
     activeTripId,
     currency,
@@ -959,8 +879,7 @@ export const TravelProvider: React.FC<{ children: ReactNode }> = ({ children }) 
         isAuthModalOpen,
         openAuthModal,
         closeAuthModal,
-        signInWithUsername,
-        signUpWithUsername,
+        signInWithGoogle,
         logout,
         trips,
         activeTripId,

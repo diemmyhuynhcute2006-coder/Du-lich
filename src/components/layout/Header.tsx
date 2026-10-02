@@ -94,21 +94,21 @@ export const Header: React.FC<HeaderProps> = ({
 
       {/* Zone 3: Primary Action & User Account */}
       <div className="flex items-center gap-2.5">
-        {/* Account Sync Status Indicator */}
+        {/* Cloud Sync Status Indicator */}
         {user ? (
           <div
             className="hidden sm:flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-50 border border-emerald-200 text-[11px] text-emerald-800"
-            title={isSyncing ? 'Đang lưu dữ liệu hành trình...' : 'Dữ liệu đã được lưu trữ an toàn trong tài khoản'}
+            title={isSyncing ? 'Đang đồng bộ dữ liệu lên Cloud Firestore...' : 'Dữ liệu đã được lưu trữ an toàn trên đám mây'}
           >
             {isSyncing ? (
               <>
                 <RefreshCw className="w-3 h-3 text-emerald-600 animate-spin" />
-                <span>Đang lưu...</span>
+                <span>Đang đồng bộ...</span>
               </>
             ) : (
               <>
-                <Check className="w-3 h-3 text-emerald-600" />
-                <span className="font-medium">Đã lưu tài khoản</span>
+                <Cloud className="w-3 h-3 text-emerald-600" />
+                <span className="font-medium">Cloud Firestore</span>
               </>
             )}
           </div>
@@ -116,10 +116,10 @@ export const Header: React.FC<HeaderProps> = ({
           <button
             onClick={openAuthModal}
             className="hidden sm:inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-amber-50 border border-amber-200 text-[11px] text-amber-800 hover:bg-amber-100 transition-colors cursor-pointer"
-            title="Đăng ký hoặc đăng nhập để tạo dữ liệu hành trình riêng biệt"
+            title="Đăng nhập Google để đồng bộ vĩnh viễn và không bị mất dữ liệu"
           >
-            <UserIcon className="w-3 h-3 text-amber-600" />
-            <span>Chưa đăng nhập (Khách)</span>
+            <Cloud className="w-3 h-3 text-amber-600" />
+            <span>Chưa đăng nhập (Lưu tạm)</span>
           </button>
         )}
 
@@ -145,10 +145,10 @@ export const Header: React.FC<HeaderProps> = ({
               )}
               <div className="hidden lg:block">
                 <span className="text-xs font-semibold text-stone-800 block leading-tight max-w-[120px] truncate">
-                  {user.displayName || username || 'Người dùng'}
+                  {user.displayName || user.email?.split('@')[0]}
                 </span>
                 <span className="text-[10px] text-emerald-700 block leading-tight font-medium">
-                  @{username || 'user'}
+                  Google Account
                 </span>
               </div>
             </button>
@@ -163,19 +163,19 @@ export const Header: React.FC<HeaderProps> = ({
                 <div className="absolute right-0 mt-1.5 w-64 bg-white border border-stone-200 rounded-xl shadow-lg p-2 z-50 animate-in fade-in zoom-in-95 duration-100">
                   <div className="px-3 py-2 border-b border-stone-100">
                     <p className="text-xs font-semibold text-stone-900 truncate">
-                      {user.displayName || username || 'Người dùng'}
+                      {user.displayName || 'Người dùng Google'}
                     </p>
-                    <p className="text-[11px] text-stone-500 font-mono truncate mt-0.5">
-                      @{username || 'user'}
+                    <p className="text-[11px] text-stone-500 truncate mt-0.5">
+                      {user.email}
                     </p>
                   </div>
 
                   <div className="py-1">
                     <div className="px-3 py-2 text-[11px] text-stone-600 flex items-center justify-between">
-                      <span>Trạng thái lưu:</span>
+                      <span>Lưu trữ:</span>
                       <span className="text-emerald-700 font-semibold flex items-center gap-1">
-                        <Check className="w-3 h-3" />
-                        Tài khoản riêng
+                        <Cloud className="w-3 h-3 text-emerald-600" />
+                        Cloud Firestore
                       </span>
                     </div>
                   </div>
